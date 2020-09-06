@@ -1,3 +1,5 @@
+require 'yaml'
+
 class PlayGame
   @@hangman_states = {
     1 => [" ", "_", "_", " ", "\n", " ", " ", " ", "|", "\n", " ", " ", " ", "|", "\n", " ", " ", " ", "|", "\n", "_", "_", "_", "|", "\n",],
@@ -9,7 +11,7 @@ class PlayGame
     7 => [" ", "_", "_", " ", "\n", " ", "O", " ", "|", "\n", "-", "|", "-", "|", "\n", " ", "/", "\\", "|", "\n", "_", "_", "_", "|", "\n",]
   }
 
-  def initialize
+  def start
     hangman_file = File.open "5desk.txt"
     @hangman_words = hangman_file.readlines.map(&:chomp)
     hangman_file.close
@@ -30,12 +32,19 @@ class PlayGame
     @@guesses = 1
     @@guess_word_arr = ["_"] * @@selected_word.length
     @@used_words = []
+    if File.exists?("./hangman_save.yml")
+      puts "Would you like to load your previous save? (y, n)" 
+      @load_selection = gets.chomp.downcase
+      load_game(@load_selection)
+    end
     until @@guesses == 7
       print @@hangman_states[@@guesses].join()
-      print "Used words: " + @@used_words.join()
-      puts
-      print @@guess_word_arr.join()
-      puts
+      print "Used words: " + @@used_words.join() + "\n"
+      print @@guess_word_arr.join() + "\n"
+      puts "Would you like to save your game? (y, n)"
+      @save_selection = gets.chomp.downcase
+      saving?(@save_selection)
+      puts "Please take a guess"
       @player_selection = gets.chomp.downcase
       hangman_check(@player_selection)
       if endgame_check?
@@ -48,6 +57,7 @@ class PlayGame
   end
 
   def hangman_check(letter)
+    letter = letter[0] if letter.length > 1
     @@guess_word_arr[0] = letter.capitalize if @@selected_word[0] == letter.capitalize
     if @@used_words.include?(letter)
       puts "Oops already tried that letter"
@@ -69,6 +79,27 @@ class PlayGame
       return false
     end
   end
+
+  def saving?(choice)
+    if choice == "y"
+      File.open("./hangman_save.yml", 'w') { |f| YAML.dump([@@selected_word, @@guesses, @@used_words, @@guess_word_arr], f) }
+      exit
+    end
+  end
+
+  def load_game(choice)
+    if choice == 'y'
+      yaml = YAML.load_file('./hangman_save.yml')
+      @@selected_word = yaml[0]
+      @@guesses = yaml[1]
+      @@used_words = yaml[2]
+      @@guess_word_arr = yaml[3]
+      File.delete('./hangman_save.yml')
+    end
+  end
+
 end
 
-PlayGame.new
+new_game = PlayGame.new
+
+new_game.start
